@@ -1,12 +1,13 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QDialog , QTableWidgetItem, QHeaderView, QAbstractItemView
+from PyQt5.QtWidgets import QApplication, QDialog , QMainWindow, QTableWidgetItem, QHeaderView, QAbstractItemView
 from PyQt5 import uic
 from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QTimer, QDateTime
 
-class MyApp(QDialog):
+class MyApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi('WindowsSecurityUpdate.ui', self)
+        uic.loadUi('test.ui', self)
 
         self.machine_dict = {
                             "71AW01"  : {"index": 0, "os": 'I_dont_know'},
@@ -46,16 +47,42 @@ class MyApp(QDialog):
         self.index_to_machine = {v["index"]: k for k,v in self.machine_dict.items()} # Creates a new reversed dictionary.
 
         self.Reload.clicked.connect(self.reload) #TODO: Do the reload action
+
+        self.UpdateAll.setEnabled(False) 
+        self.UpdateSelected.setEnabled(False)
+
         self.UpdateAll.clicked.connect(self.apply_updates) #TODO: Do the update action - should be break to two parts - first servicing then comulative
         self.UpdateSelected.clicked.connect(self.get_selected_items) #TODO: Add update selected machines action - maybe in the general update I should update all or....
         self.ClearSelections.clicked.connect(self.Table.clearSelection)
         self.Quit.clicked.connect(self.close)
+        self.Test.clicked.connect(self.second_window)
+
 
         # Set up the table widget
         header = self.Table.horizontalHeader() # Get the horizontal header of the table
         self.Table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # Set the horizontal header to stretch
         self.Table.setSelectionBehavior(QAbstractItemView.SelectRows) # Set the selection behavior to select rows
         self.Table.setSelectionMode(QAbstractItemView.MultiSelection) # Set the selection mode to multiple selection
+
+    def second_window(self):
+        # Create a new dialog window
+        self.Timing = QDialog(self)
+        uic.loadUi('TimingUpdateWindow.ui', self.Timing)
+
+        self.timer = QTimer(self) # Create a timer
+        self.timer.timeout.connect(self.update_time) # Connect the timer's timeout signal to the update_time method
+        self.timer.start(1000) # Start the timer with a 1 second
+        self.update_time() # Call the update_time method to set the initial time
+
+        # Set up the dialog window
+        self.Timing.setWindowTitle("Update Timing")
+        self.Timing.setModal(True)
+        self.Timing.show()
+
+    def update_time(self):
+        # Get the current time and format it
+        current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
+        self.Timing.TimeAndDateLabel.setText(current_time)
 
     def reload(self):
         # Set the table to have one row and one column
@@ -76,6 +103,10 @@ class MyApp(QDialog):
         self.Table.setItem(0, 4, self.warning)
         
 
+        self.UpdateAll.setEnabled(True) 
+        self.UpdateSelected.setEnabled(True)
+        
+
     def apply_updates(self, selected_machines):
         if not selected_machines:
             print("No machines selected")
@@ -92,10 +123,16 @@ class MyApp(QDialog):
                     selected_machines.append(machine)
         self.apply_updates(selected_machines)
         
-app = QApplication(sys.argv)
-window = MyApp()
-window.show()
-sys.exit(app.exec_())
+
+def main():
+    app = QApplication(sys.argv)
+    window = MyApp()
+    window.show()
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":    
+    main()
 
 
 
