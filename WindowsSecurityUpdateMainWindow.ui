@@ -223,17 +223,17 @@
        </row>
        <column>
         <property name="text">
+         <string>OS</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
          <string>KB</string>
         </property>
        </column>
        <column>
         <property name="text">
          <string>Servicing Stack</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Machine</string>
         </property>
        </column>
        <column>
@@ -251,157 +251,162 @@
          <string>Notes</string>
         </property>
        </column>
-       <item row="0" column="2">
+       <column>
+        <property name="text">
+         <string>Machine</string>
+        </property>
+       </column>
+       <item row="0" column="6">
         <property name="text">
          <string>71AW01</string>
         </property>
        </item>
-       <item row="1" column="2">
+       <item row="1" column="6">
         <property name="text">
          <string>71AW02</string>
         </property>
        </item>
-       <item row="2" column="2">
+       <item row="2" column="6">
         <property name="text">
          <string>71AW03</string>
         </property>
        </item>
-       <item row="3" column="2">
+       <item row="3" column="6">
         <property name="text">
          <string>71AW04</string>
         </property>
        </item>
-       <item row="4" column="2">
+       <item row="4" column="6">
         <property name="text">
          <string>71AW05</string>
         </property>
        </item>
-       <item row="5" column="2">
+       <item row="5" column="6">
         <property name="text">
          <string>71WS01</string>
         </property>
        </item>
-       <item row="6" column="2">
+       <item row="6" column="6">
         <property name="text">
          <string>71WS02</string>
         </property>
        </item>
-       <item row="7" column="2">
+       <item row="7" column="6">
         <property name="text">
          <string>71WS03</string>
         </property>
        </item>
-       <item row="8" column="2">
+       <item row="8" column="6">
         <property name="text">
          <string>71WS04</string>
         </property>
        </item>
-       <item row="9" column="2">
+       <item row="9" column="6">
         <property name="text">
          <string>71WS05</string>
         </property>
        </item>
-       <item row="10" column="2">
+       <item row="10" column="6">
         <property name="text">
          <string>71WS06</string>
         </property>
        </item>
-       <item row="11" column="2">
+       <item row="11" column="6">
         <property name="text">
          <string>TCLI01</string>
         </property>
        </item>
-       <item row="12" column="2">
+       <item row="12" column="6">
         <property name="text">
          <string>TCLI02</string>
         </property>
        </item>
-       <item row="13" column="2">
+       <item row="13" column="6">
         <property name="text">
          <string>TCLI03</string>
         </property>
        </item>
-       <item row="14" column="2">
+       <item row="14" column="6">
         <property name="text">
          <string>TCLI04</string>
         </property>
        </item>
-       <item row="15" column="2">
+       <item row="15" column="6">
         <property name="text">
          <string>TCLI05</string>
         </property>
        </item>
-       <item row="16" column="2">
+       <item row="16" column="6">
         <property name="text">
          <string>TCLI06</string>
         </property>
        </item>
-       <item row="17" column="2">
+       <item row="17" column="6">
         <property name="text">
          <string>71ES02</string>
         </property>
        </item>
-       <item row="18" column="2">
+       <item row="18" column="6">
         <property name="text">
          <string>71ES03</string>
         </property>
        </item>
-       <item row="19" column="2">
+       <item row="19" column="6">
         <property name="text">
          <string>VIRT03</string>
         </property>
        </item>
-       <item row="20" column="2">
+       <item row="20" column="6">
         <property name="text">
          <string>HIST1A</string>
         </property>
        </item>
-       <item row="21" column="2">
+       <item row="21" column="6">
         <property name="text">
          <string>NAS_SRV</string>
         </property>
        </item>
-       <item row="22" column="2">
+       <item row="22" column="6">
         <property name="text">
          <string>EPOSRV</string>
         </property>
        </item>
-       <item row="23" column="2">
+       <item row="23" column="6">
         <property name="text">
          <string>WSUS</string>
         </property>
        </item>
-       <item row="24" column="2">
+       <item row="24" column="6">
         <property name="text">
          <string>NETMON</string>
         </property>
        </item>
-       <item row="25" column="2">
+       <item row="25" column="6">
         <property name="text">
          <string>PI_MAG</string>
         </property>
        </item>
-       <item row="26" column="2">
+       <item row="26" column="6">
         <property name="text">
          <string>PIMAG_IN</string>
         </property>
        </item>
-       <item row="27" column="2">
+       <item row="27" column="6">
         <property name="text">
          <string>SYSADV</string>
         </property>
        </item>
-       <item row="28" column="2">
+       <item row="28" column="6">
         <property name="text">
          <string>AUTOSAVE</string>
         </property>
        </item>
-       <item row="29" column="2">
+       <item row="29" column="6">
         <property name="text">
          <string>PRIMDC</string>
         </property>
        </item>
-       <item row="30" column="2">
+       <item row="30" column="6">
         <property name="text">
          <string>SECNDC</string>
         </property>
@@ -455,8 +460,26 @@
      <height>22</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuEdit_Table">
+    <property name="title">
+     <string>Edit Table</string>
+    </property>
+    <addaction name="actionEdit_Table"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+   </widget>
+   <addaction name="menuEdit_Table"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionEdit_Table">
+   <property name="text">
+    <string>Edit Table</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>
