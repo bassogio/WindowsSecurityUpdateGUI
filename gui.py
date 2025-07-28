@@ -99,8 +99,8 @@ class MyApp(QMainWindow):
         self.UpdateAll.clicked.connect(self.on_update_all_clicked)
         self.UpdateSelected.clicked.connect(self.on_update_selected_clicked)
         self.ClearSelections.clicked.connect(self.Table.clearSelection)
+        self.ScheduleTheUpdates.clicked.connect(self.ScheduleUpdatesWindow)
         self.Quit.clicked.connect(self.close)
-        self.Test.clicked.connect(self.ScheduleUpdatesWindow)
 
         if hasattr(self, 'actionEdit_Table'):
             self.actionEdit_Table.triggered.connect(self.open_edit_table_dialog)
@@ -110,8 +110,10 @@ class MyApp(QMainWindow):
 
         self.UpdateAll.setEnabled(True)
         self.UpdateSelected.setEnabled(True)
+        self.ScheduleTheUpdates.setEnabled(True)
         self.set_button_visual_state(self.UpdateAll, inactive=True)
         self.set_button_visual_state(self.UpdateSelected, inactive=True)
+        self.set_button_visual_state(self.ScheduleTheUpdates, inactive=True)
 
         self.Table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.Table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -261,21 +263,24 @@ class MyApp(QMainWindow):
         free = round(random.uniform(0.1, 0.9) * total, 1)
         return free, total  # return as tuple of numbers
 
-
     def set_disk_space_progress(self, row, col, free_gb, total_gb):
         if total_gb == 0:
             percent = 0
         else:
             percent = int((free_gb / total_gb) * 100)
 
+        # Set the text value into the cell (so it gets saved)
+        text = f"{free_gb:.1f} GB / {total_gb:.1f} GB"
+        self.Table.setItem(row, col, QTableWidgetItem(text))
+
+        # Show progress visually on top of that cell
         progress = QProgressBar()
         progress.setRange(0, 100)
         progress.setValue(percent)
         progress.setAlignment(Qt.AlignCenter)
         progress.setTextVisible(True)
-        progress.setFormat(f"{free_gb:.1f} GB / {total_gb:.1f} GB")
+        progress.setFormat(text)
 
-        # Make text appear above the bar using transparent background
         progress.setStyleSheet(f"""
             QProgressBar {{
                 border: 1px solid gray;
@@ -341,6 +346,7 @@ class MyApp(QMainWindow):
             machine_item = self.Table.item(row, 0)
             if machine_item:
                 hostname = machine_item.text()
+
                 os_name = self.get_simulated_os(hostname)
                 # os_name = self.get_remote_os(hostname)
                 self.Table.setItem(row, header_index["OS"], QTableWidgetItem(os_name))
@@ -348,7 +354,6 @@ class MyApp(QMainWindow):
                 free_gb, total_gb = self.get_simulated_disk_space(hostname)
                 # free_gb, total_gb = self.get_disk_space(hostname)
                 self.set_disk_space_progress(row, header_index["Disk Space"], free_gb, total_gb)
-
 
 
 
@@ -366,10 +371,19 @@ class MyApp(QMainWindow):
         self.load_done = True
         self.set_button_visual_state(self.UpdateAll, inactive=False)
         self.set_button_visual_state(self.UpdateSelected, inactive=False)
+        self.set_button_visual_state(self.ScheduleTheUpdates, inactive=False)
 
     def ScheduleUpdatesWindow(self):
+        if not self.load_done:
+            self.show_warning()
+            return
+        
         self.Timing = QDialog(self)
         uic.loadUi('ScheduleUpdates.ui', self.Timing)
+
+        # Connect OK button to handler
+        self.Timing.OkCancle.clicked.connect(self.schedule_updates_task)
+
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_time)
         self.timer.start(1000)
@@ -378,9 +392,53 @@ class MyApp(QMainWindow):
         self.Timing.setModal(True)
         self.Timing.show()
 
+    def schedule_updates_task(self):
+        date = self.Timing.SetDate.selectedDate()
+        time = self.Timing.SetTime.time()
+
+        # Combine date + time
+        scheduled_datetime = QDateTime(date, time)
+
+        # Save scheduled time for later use
+        self.scheduled_time = scheduled_datetime
+
+        # Start a timer to monitor when to run updates
+        self.monitor_timer = QTimer(self)
+        self.monitor_timer.timeout.connect(self.check_if_time_reached)
+        self.monitor_timer.start(10_000)  # Check every 10 seconds
+
+        self.Timing.accept()  # Close the dialog
+
+    def check_if_time_reached(self):
+        now = QDateTime.currentDateTime()
+        if now >= self.scheduled_time:
+            self.monitor_timer.stop()
+            self.run_scheduled_updates()
+
+    def run_scheduled_updates(self):
+        machine_list = self.get_machine_list_from_table()
+        self.apply_updates(machine_list)
+        QMessageBox.information(self, "Updates Started", f"Scheduled update started at {QDateTime.currentDateTime().toString()}")
+
     def update_time(self):
         current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
         self.Timing.TimeAndDateLabel.setText(current_time)
+
+    def save_schedule(self):
+        with open("schedule.json", "w") as f:
+            json.dump({"timestamp": self.scheduled_time.toSecsSinceEpoch()}, f)
+
+    def load_schedule(self):
+        if os.path.exists("schedule.json"):
+            with open("schedule.json", "r") as f:
+                data = json.load(f)
+                ts = data.get("timestamp")
+                if ts:
+                    self.scheduled_time = QDateTime.fromSecsSinceEpoch(ts)
+                    # Start monitoring again
+                    self.monitor_timer = QTimer(self)
+                    self.monitor_timer.timeout.connect(self.check_if_time_reached)
+                    self.monitor_timer.start(10_000)
 
     def open_edit_table_dialog(self):
         headers = [self.Table.horizontalHeaderItem(i).text() for i in range(self.Table.columnCount())]
@@ -411,12 +469,28 @@ class MyApp(QMainWindow):
                 self.set_button_visual_state(self.UpdateAll, inactive=True)
                 self.set_button_visual_state(self.UpdateSelected, inactive=True)
 
+    def closeEvent(self, event):
+        reply = QMessageBox.question(
+            self,
+            "Save Changes",
+            "Do you want to save the updated table before exiting?",
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+            QMessageBox.Yes
+        )
+
+        if reply == QMessageBox.Yes:
+            self.save_table_data()
+            event.accept()
+        elif reply == QMessageBox.No:
+            event.accept()
+        else:
+            event.ignore()
+
 def main():
     app = QApplication(sys.argv)
     window = MyApp()
     window.show()
     sys.exit(app.exec_())
-
 
 if __name__ == "__main__":
     main()
