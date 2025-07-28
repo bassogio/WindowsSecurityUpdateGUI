@@ -26,6 +26,9 @@
     <layout class="QGridLayout" name="gridLayout">
      <item row="1" column="0">
       <widget class="QPushButton" name="Reload">
+       <property name="whatsThis">
+        <string/>
+       </property>
        <property name="text">
         <string>Reload</string>
        </property>
@@ -60,6 +63,9 @@
        </property>
        <property name="cursor" stdset="0">
         <cursorShape>ArrowCursor</cursorShape>
+       </property>
+       <property name="whatsThis">
+        <string/>
        </property>
        <property name="editTriggers">
         <set>QAbstractItemView::NoEditTriggers</set>
@@ -236,11 +242,6 @@
        <column>
         <property name="text">
          <string>OS</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>KB</string>
         </property>
        </column>
        <column>
@@ -462,14 +463,17 @@
    </property>
    <widget class="QMenu" name="menuEdit_Table">
     <property name="title">
-     <string>Edit Table</string>
+     <string>Edit</string>
     </property>
+    <addaction name="actionChange_Path_to_Installation_Files"/>
     <addaction name="actionEdit_Table"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="actionHelp_Center"/>
    </widget>
    <addaction name="menuEdit_Table"/>
    <addaction name="menuHelp"/>
@@ -478,6 +482,16 @@
   <action name="actionEdit_Table">
    <property name="text">
     <string>Edit Table</string>
+   </property>
+  </action>
+  <action name="actionChange_Path_to_Installation_Files">
+   <property name="text">
+    <string>Change Path to Installation Files</string>
+   </property>
+  </action>
+  <action name="actionHelp_Center">
+   <property name="text">
+    <string>Help Center</string>
    </property>
   </action>
  </widget>

@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt
 
 DATA_FILE = "table_data.json"
 
+
 class EditTableDialog(QDialog):
     def __init__(self, parent, table_data, headers):
         super().__init__(parent)
@@ -91,6 +92,7 @@ class EditTableDialog(QDialog):
         cols = self.table.columnCount()
         return [[self.table.item(i, j).text() if self.table.item(i, j) else "" for j in range(cols)] for i in range(rows)]
 
+
 class MyApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -103,7 +105,6 @@ class MyApp(QMainWindow):
         self.ClearSelections.clicked.connect(self.Table.clearSelection)
         self.Quit.clicked.connect(self.close)
         self.Test.clicked.connect(self.ScheduleUpdatesWindow)
-        
         if hasattr(self, 'actionEdit_Table'):
             self.actionEdit_Table.triggered.connect(self.open_edit_table_dialog)
 
@@ -161,6 +162,10 @@ class MyApp(QMainWindow):
         """Toggle visibility of the Help Center dock."""
         self.help_dock.setVisible(not self.help_dock.isVisible())
 
+
+
+
+    
     def save_table_data(self):
         headers = [self.Table.horizontalHeaderItem(i).text() for i in range(self.Table.columnCount())]
         data = []
@@ -266,6 +271,7 @@ class MyApp(QMainWindow):
                 self.set_button_disabled_appearance(self.UpdateAll, True)
                 self.set_button_disabled_appearance(self.UpdateSelected, True)
 
+
 def main():
     app = QApplication(sys.argv)
     window = MyApp()
@@ -275,3 +281,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

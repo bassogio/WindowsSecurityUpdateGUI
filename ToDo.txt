@@ -1,0 +1,18 @@
+# Reload
+Should check OS of every remote device
+Should check KB of each installation - is service stack and cumulative alway the same KB? 
+check instalation status
+
+# Schedual updates
+let user set time and date and make the installation be schedualed
+make the repeat work
+save the users email
+select multiple dates?
+
+# Update all
+make it update all
+should update instalation status while running
+# Update selected
+same as all but for selected machines
+
+# Edit Help Center
