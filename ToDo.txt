@@ -3,7 +3,6 @@ Should check KB of each installation - is service stack and cumulative alway the
 check instalation status
 
 # Schedual updates
-let user set time and date and make the installation be schedualed
 make the repeat work
 save the users email
 select multiple dates?
@@ -20,7 +19,6 @@ same as all but for selected machines
 # Add reboot option?
 
 # Resize table with window
-
 
 # disk space
 ccheck iiif there is enough space for installation

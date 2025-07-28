@@ -10,7 +10,7 @@ from PyQt5 import uic
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QTimer, QDateTime, Qt
 
-DATA_FILE = "table_data.json"
+DATA_FILE = "table_data.json" 
 
 class EditTableDialog(QDialog):
     def __init__(self, parent, table_data, headers):
@@ -95,7 +95,7 @@ class MyApp(QMainWindow):
         uic.loadUi("WindowsSecurityUpdateMainWindow.ui", self)
 
         self.load_done = False
-        self.Load.clicked.connect(self.load)
+        self.Load.clicked.connect(self.load) 
         self.UpdateAll.clicked.connect(self.on_update_all_clicked)
         self.UpdateSelected.clicked.connect(self.on_update_selected_clicked)
         self.ClearSelections.clicked.connect(self.Table.clearSelection)
@@ -121,6 +121,7 @@ class MyApp(QMainWindow):
 
         self.load_table_data()
         self.update_row_headers()
+        self.load_schedule()
 
         if hasattr(self, 'actionHelp_Center'):
             self.actionHelp_Center.triggered.connect(self.toggle_help_panel)
@@ -233,7 +234,6 @@ class MyApp(QMainWindow):
         ]
         return random.choice(simulated_os_list)
 
-    # Get remote OS using PowerShell
     def get_remote_os(self, hostname):
         """
         Returns the OS of a remote machine using native PowerShell.
@@ -381,7 +381,6 @@ class MyApp(QMainWindow):
         self.Timing = QDialog(self)
         uic.loadUi('ScheduleUpdates.ui', self.Timing)
 
-        # Connect OK button to handler
         self.Timing.OkCancle.clicked.connect(self.schedule_updates_task)
 
         self.timer = QTimer(self)
@@ -395,19 +394,27 @@ class MyApp(QMainWindow):
     def schedule_updates_task(self):
         date = self.Timing.SetDate.selectedDate()
         time = self.Timing.SetTime.time()
-
-        # Combine date + time
         scheduled_datetime = QDateTime(date, time)
 
-        # Save scheduled time for later use
-        self.scheduled_time = scheduled_datetime
+        if scheduled_datetime <= QDateTime.currentDateTime():
+            QMessageBox.warning(self, "Invalid Time", "Please select a future time.")
+            return  # <-- Don't close the window or save anything
 
-        # Start a timer to monitor when to run updates
+        self.scheduled_time = scheduled_datetime
+        self.repeat_mode = {
+            "weekly": self.Timing.RepeatWeek.isChecked(),
+            "monthly": self.Timing.RepeatMonth.isChecked(),
+            "yearly": self.Timing.RepeatYear.isChecked()
+        }
+
+        self.save_schedule()
+
         self.monitor_timer = QTimer(self)
         self.monitor_timer.timeout.connect(self.check_if_time_reached)
-        self.monitor_timer.start(10_000)  # Check every 10 seconds
+        self.monitor_timer.start(10_000)
 
-        self.Timing.accept()  # Close the dialog
+        self.Timing.accept()
+
 
     def check_if_time_reached(self):
         now = QDateTime.currentDateTime()
@@ -419,14 +426,18 @@ class MyApp(QMainWindow):
         machine_list = self.get_machine_list_from_table()
         self.apply_updates(machine_list)
         QMessageBox.information(self, "Updates Started", f"Scheduled update started at {QDateTime.currentDateTime().toString()}")
-
+        
     def update_time(self):
         current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
         self.Timing.TimeAndDateLabel.setText(current_time)
 
     def save_schedule(self):
+        data = {
+            "timestamp": self.scheduled_time.toSecsSinceEpoch(),
+            "repeat": self.repeat_mode
+        }
         with open("schedule.json", "w") as f:
-            json.dump({"timestamp": self.scheduled_time.toSecsSinceEpoch()}, f)
+            json.dump(data, f, indent=2)
 
     def load_schedule(self):
         if os.path.exists("schedule.json"):
@@ -435,7 +446,11 @@ class MyApp(QMainWindow):
                 ts = data.get("timestamp")
                 if ts:
                     self.scheduled_time = QDateTime.fromSecsSinceEpoch(ts)
-                    # Start monitoring again
+                    self.repeat_mode = data.get("repeat", {
+                        "weekly": False,
+                        "monthly": False,
+                        "yearly": False
+                    })
                     self.monitor_timer = QTimer(self)
                     self.monitor_timer.timeout.connect(self.check_if_time_reached)
                     self.monitor_timer.start(10_000)

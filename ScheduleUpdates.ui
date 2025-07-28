@@ -81,7 +81,7 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QCheckBox" name="EveryWeekCheckBox">
+      <widget class="QCheckBox" name="RepeatWeek">
        <property name="font">
         <font>
          <pointsize>16</pointsize>
@@ -93,7 +93,7 @@
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QCheckBox" name="EveryMonthCheckBox">
+      <widget class="QCheckBox" name="RepeatMonth">
        <property name="font">
         <font>
          <pointsize>16</pointsize>
@@ -105,7 +105,7 @@
       </widget>
      </item>
      <item row="1" column="2">
-      <widget class="QCheckBox" name="EveryYearCheckBox">
+      <widget class="QCheckBox" name="RepeatYear">
        <property name="font">
         <font>
          <pointsize>16</pointsize>
