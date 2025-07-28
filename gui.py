@@ -290,6 +290,49 @@ class MyApp(QMainWindow):
 
         self.Table.setCellWidget(row, col, progress)
 
+    def get_disk_space(self, hostname):
+        """
+        Returns (free_gb, total_gb) of the primary disk on a remote machine using PowerShell.
+        Requires:
+            - Remote PowerShell enabled
+            - Firewall rules for PowerShell remoting
+            - Access rights to the remote host
+        """
+        import subprocess
+        import re
+        try:
+            ps_command = (
+                f"Invoke-Command -ComputerName {hostname} -ScriptBlock {{ "
+                f"$d = Get-CimInstance Win32_LogicalDisk -Filter \"DeviceID='C:'\"; "
+                f"'Free=' + $d.FreeSpace + ';Total=' + $d.Size "
+                f"}}"
+            )
+
+            result = subprocess.run(
+                ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_command],
+                capture_output=True, text=True, timeout=10
+            )
+            output = result.stdout.strip()
+            error = result.stderr.strip()
+
+            if result.returncode != 0 or error:
+                raise RuntimeError(error or "Unknown PowerShell error")
+
+            # Parse the output (expected: Free=1234567890;Total=9876543210)
+            match = re.search(r'Free=(\d+);Total=(\d+)', output)
+            if not match:
+                raise ValueError("Unexpected format from remote command")
+
+            free_bytes = int(match.group(1))
+            total_bytes = int(match.group(2))
+
+            free_gb = round(free_bytes / (1024**3), 1)
+            total_gb = round(total_bytes / (1024**3), 1)
+            return free_gb, total_gb
+
+        except Exception as e:
+            print(f"[Disk Error] {hostname}: {e}")
+            return 0.0, 0.0  # fallback
 
     def load(self):
         header_index = {self.Table.horizontalHeaderItem(i).text(): i for i in range(self.Table.columnCount())}
@@ -298,10 +341,12 @@ class MyApp(QMainWindow):
             machine_item = self.Table.item(row, 0)
             if machine_item:
                 hostname = machine_item.text()
-                os_name = self.get_simulated_os(hostname)  
+                os_name = self.get_simulated_os(hostname)
+                # os_name = self.get_remote_os(hostname)
                 self.Table.setItem(row, header_index["OS"], QTableWidgetItem(os_name))
 
                 free_gb, total_gb = self.get_simulated_disk_space(hostname)
+                # free_gb, total_gb = self.get_disk_space(hostname)
                 self.set_disk_space_progress(row, header_index["Disk Space"], free_gb, total_gb)
 
 
