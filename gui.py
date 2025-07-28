@@ -4,13 +4,11 @@ import os
 from PyQt5.QtWidgets import (
     QApplication, QDialog, QMainWindow, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QMessageBox, QVBoxLayout, QDialogButtonBox, QTableWidget,
-    QHBoxLayout, QPushButton
+    QHBoxLayout, QPushButton,  QDockWidget, QTextEdit
 )
 from PyQt5 import uic
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import QTimer, QDateTime
-from PyQt5.QtWidgets import QDockWidget, QTextEdit
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QTimer, QDateTime, Qt
 
 DATA_FILE = "table_data.json"
 
@@ -106,6 +104,9 @@ class MyApp(QMainWindow):
 
         if hasattr(self, 'actionEdit_Table'):
             self.actionEdit_Table.triggered.connect(self.open_edit_table_dialog)
+
+        # if hasattr(self, 'actionChange_Path_to_Installation_Files'):
+        #     self.actionChange_Path_to_Installation_Files.triggered.connect()
 
         self.UpdateAll.setEnabled(True)
         self.UpdateSelected.setEnabled(True)

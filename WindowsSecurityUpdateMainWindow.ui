@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1293</width>
-    <height>854</height>
+    <width>1401</width>
+    <height>804</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,11 +19,25 @@
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>1291</width>
-      <height>801</height>
+      <width>1401</width>
+      <height>781</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
+     <item row="1" column="2">
+      <widget class="QPushButton" name="Test">
+       <property name="text">
+        <string>Schedule The Updates</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="6">
+      <widget class="QPushButton" name="Quit">
+       <property name="text">
+        <string>Quit</string>
+       </property>
+      </widget>
+     </item>
      <item row="1" column="0">
       <widget class="QPushButton" name="Load">
        <property name="whatsThis">
@@ -31,6 +45,13 @@
        </property>
        <property name="text">
         <string>Load</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="4">
+      <widget class="QPushButton" name="UpdateSelected">
+       <property name="text">
+        <string>Update Selected</string>
        </property>
       </widget>
      </item>
@@ -46,6 +67,13 @@
         </size>
        </property>
       </spacer>
+     </item>
+     <item row="1" column="5">
+      <widget class="QPushButton" name="ClearSelections">
+       <property name="text">
+        <string>Clear Selections</string>
+       </property>
+      </widget>
      </item>
      <item row="1" column="3">
       <widget class="QPushButton" name="UpdateAll">
@@ -246,6 +274,11 @@
        </column>
        <column>
         <property name="text">
+         <string>Disk Space</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
          <string>Servicing Stack</string>
         </property>
        </column>
@@ -421,34 +454,6 @@
        </item>
       </widget>
      </item>
-     <item row="1" column="6">
-      <widget class="QPushButton" name="Quit">
-       <property name="text">
-        <string>Quit</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="4">
-      <widget class="QPushButton" name="UpdateSelected">
-       <property name="text">
-        <string>Update Selected</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2">
-      <widget class="QPushButton" name="Test">
-       <property name="text">
-        <string>Schedule The Updates</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="5">
-      <widget class="QPushButton" name="ClearSelections">
-       <property name="text">
-        <string>Clear Selections</string>
-       </property>
-      </widget>
-     </item>
     </layout>
    </widget>
   </widget>
@@ -457,7 +462,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1293</width>
+     <width>1401</width>
      <height>22</height>
     </rect>
    </property>
@@ -478,7 +483,6 @@
    <addaction name="menuEdit_Table"/>
    <addaction name="menuHelp"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionEdit_Table">
    <property name="text">
     <string>Edit Table</string>

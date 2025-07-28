@@ -2,6 +2,7 @@
   "headers": [
     "Machine",
     "OS",
+    "Disk Space",
     "KB",
     "Servicing Stack",
     "Cumulative",
