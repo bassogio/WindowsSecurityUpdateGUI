@@ -96,19 +96,21 @@ class MyApp(QMainWindow):
         super().__init__()
         uic.loadUi("WindowsSecurityUpdateMainWindow.ui", self)
 
-        self.reload_done = False
-        self.Reload.clicked.connect(self.reload)
+        self.load_done = False
+        self.Load.clicked.connect(self.load)
         self.UpdateAll.clicked.connect(self.on_update_all_clicked)
         self.UpdateSelected.clicked.connect(self.on_update_selected_clicked)
         self.ClearSelections.clicked.connect(self.Table.clearSelection)
         self.Quit.clicked.connect(self.close)
         self.Test.clicked.connect(self.ScheduleUpdatesWindow)
-        
+
         if hasattr(self, 'actionEdit_Table'):
             self.actionEdit_Table.triggered.connect(self.open_edit_table_dialog)
 
-        self.set_button_disabled_appearance(self.UpdateAll, True)
-        self.set_button_disabled_appearance(self.UpdateSelected, True)
+        self.UpdateAll.setEnabled(True)
+        self.UpdateSelected.setEnabled(True)
+        self.set_button_visual_state(self.UpdateAll, inactive=True)
+        self.set_button_visual_state(self.UpdateSelected, inactive=True)
 
         self.Table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.Table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -146,7 +148,7 @@ class MyApp(QMainWindow):
             <h2>Help Center</h2>
             <p>Welcome to the Help Center. Here’s what you can do:</p>
             <ul>
-                <li><b>Reload</b>: Scans all listed machines and updates their info.</li>
+                <li><b>Load</b>: Scans all listed machines and updates their info.</li>
                 <li><b>Update All</b>: Installs updates on every machine in the list.</li>
                 <li><b>Update Selected</b>: Only applies updates to selected rows.</li>
                 <li><b>Clear Selections</b>: Deselects all rows.</li>
@@ -173,34 +175,36 @@ class MyApp(QMainWindow):
         with open(DATA_FILE, "w") as f:
             json.dump({"headers": headers, "data": data}, f, indent=2)
 
-    def set_button_disabled_appearance(self, button, disabled=True):
-        button.setDisabled(disabled)
-        button.setStyleSheet("""
-            QPushButton {
-                color: gray;
-                background-color: lightgray;
-                border: 1px solid #aaa;
-            }
-        """ if disabled else "")
+    def set_button_visual_state(self, button, inactive=False):
+        if inactive:
+            button.setStyleSheet("""
+                QPushButton {
+                    color: gray;
+                    background-color: lightgray;
+                    border: 1px solid #aaa;
+                }
+            """)
+        else:
+            button.setStyleSheet("")
 
     def update_row_headers(self):
         for row in range(self.Table.rowCount()):
             self.Table.setVerticalHeaderItem(row, QTableWidgetItem(str(row)))
 
     def show_warning(self):
-        QMessageBox.warning(self, "Reload Required", "Please press the Reload button before updating.")
+        QMessageBox.warning(self, "Load Required", "Please press the Reload button before updating.")
 
     def get_machine_list_from_table(self):
         return [self.Table.item(row, 0).text() for row in range(self.Table.rowCount()) if self.Table.item(row, 0)]
 
     def on_update_all_clicked(self):
-        if not self.reload_done:
+        if not self.load_done:
             self.show_warning()
             return
         self.apply_updates(self.get_machine_list_from_table())
 
     def on_update_selected_clicked(self):
-        if not self.reload_done:
+        if not self.load_done:
             self.show_warning()
             return
         selected_rows = {index.row() for index in self.Table.selectedIndexes()}
@@ -213,14 +217,14 @@ class MyApp(QMainWindow):
             return
         print(f"Applying updates to: {', '.join(selected_machines)}")
 
-    def reload(self):
+    def load(self):
         for row in range(self.Table.rowCount()):
             self.Table.setItem(row, 4, QTableWidgetItem("Pending"))
             self.Table.setItem(row, 5, QTableWidgetItem("Pending"))
             self.Table.setItem(row, 6, QTableWidgetItem(""))
-        self.reload_done = True
-        self.set_button_disabled_appearance(self.UpdateAll, False)
-        self.set_button_disabled_appearance(self.UpdateSelected, False)
+        self.load_done = True
+        self.set_button_visual_state(self.UpdateAll, inactive=False)
+        self.set_button_visual_state(self.UpdateSelected, inactive=False)
 
     def ScheduleUpdatesWindow(self):
         self.Timing = QDialog(self)
@@ -229,7 +233,7 @@ class MyApp(QMainWindow):
         self.timer.timeout.connect(self.update_time)
         self.timer.start(1000)
         self.update_time()
-        self.Timing.setWindowTitle("Update Timing")
+        self.Timing.setWindowTitle("Schedule Updates")
         self.Timing.setModal(True)
         self.Timing.show()
 
@@ -262,9 +266,10 @@ class MyApp(QMainWindow):
                         self.Table.setItem(row_index, col_index, QTableWidgetItem(cell))
                 self.update_row_headers()
                 self.save_table_data()
-                self.reload_done = False
-                self.set_button_disabled_appearance(self.UpdateAll, True)
-                self.set_button_disabled_appearance(self.UpdateSelected, True)
+                self.load_done = False
+                self.set_button_visual_state(self.UpdateAll, inactive=True)
+                self.set_button_visual_state(self.UpdateSelected, inactive=True)
+
 
 def main():
     app = QApplication(sys.argv)
