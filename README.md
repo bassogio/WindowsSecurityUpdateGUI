@@ -72,6 +72,8 @@ pyinstaller gui.py --noconfirm --onefile --windowed `
 --add-data "WindowsSecurityUpdateMainWindow.ui;." `
 --add-data "ScheduleUpdates.ui;."
 ```
+**Important: This command must be run from inside the folder that contains the .py and .ui files.**
+ 
 **Note for CMD users**: If you're using CMD (instead of PowerShell), replace backticks with carets (`^`) and use colons (`:`) instead of semicolons (`;`) for` --add-data`:
 
 ```cmd
