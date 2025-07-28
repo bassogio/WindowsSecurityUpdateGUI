@@ -4,12 +4,11 @@ import os
 from PyQt5.QtWidgets import (
     QApplication, QDialog, QMainWindow, QTableWidgetItem, QHeaderView,
     QAbstractItemView, QMessageBox, QVBoxLayout, QDialogButtonBox, QTableWidget,
-    QHBoxLayout, QPushButton,  QDockWidget, QTextEdit
+    QHBoxLayout, QPushButton,  QDockWidget, QTextEdit, QProgressBar
 )
 from PyQt5 import uic
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QTimer, QDateTime, Qt
-import random
 
 DATA_FILE = "table_data.json"
 
@@ -221,6 +220,7 @@ class MyApp(QMainWindow):
     
     def get_simulated_os(self, hostname):
         # Simulated OS detection logic
+        import random
         simulated_os_list = [
             "Windows 10 Enterprise", 
             "Windows Server 2016", 
@@ -231,8 +231,7 @@ class MyApp(QMainWindow):
         ]
         return random.choice(simulated_os_list)
 
-        import subprocess
-
+    # Get remote OS using PowerShell
     def get_remote_os(self, hostname):
         """
         Returns the OS of a remote machine using native PowerShell.
@@ -255,31 +254,55 @@ class MyApp(QMainWindow):
             return output if output else "Unavailable"
         except Exception as e:
             return f"Exception: {str(e)}"
+        
+    def get_simulated_disk_space(self, hostname):
+        import random
+        total = random.randint(100, 500)
+        free = round(random.uniform(0.1, 0.9) * total, 1)
+        return free, total  # return as tuple of numbers
+
+
+    def set_disk_space_progress(self, row, col, free_gb, total_gb):
+        if total_gb == 0:
+            percent = 0
+        else:
+            percent = int((free_gb / total_gb) * 100)
+
+        progress = QProgressBar()
+        progress.setRange(0, 100)
+        progress.setValue(percent)
+        progress.setAlignment(Qt.AlignCenter)
+        progress.setTextVisible(True)
+        progress.setFormat(f"{free_gb:.1f} GB / {total_gb:.1f} GB")
+
+        # Make text appear above the bar using transparent background
+        progress.setStyleSheet(f"""
+            QProgressBar {{
+                border: 1px solid gray;
+                border-radius: 3px;
+                text-align: center;
+            }}
+            QProgressBar::chunk {{
+                background-color: {"#4caf50" if percent > 50 else "#ff9800" if percent > 20 else "#f44336"};
+                width: 1px;
+            }}
+        """)
+
+        self.Table.setCellWidget(row, col, progress)
+
 
     def load(self):
         header_index = {self.Table.horizontalHeaderItem(i).text(): i for i in range(self.Table.columnCount())}
-
-        # for row in range(self.Table.rowCount()):
-        #     self.Table.setItem(row, header_index["OS"], QTableWidgetItem("Pending"))
-        #     self.Table.setItem(row, header_index["Servicing Stack"], QTableWidgetItem("Pending"))
-        #     self.Table.setItem(row, header_index["Cumulative"], QTableWidgetItem("Pending"))
-        #     self.Table.setItem(row, header_index["Disk Space"], QTableWidgetItem(""))
 
         for row in range(self.Table.rowCount()):
             machine_item = self.Table.item(row, 0)
             if machine_item:
                 hostname = machine_item.text()
-                os_name = self.get_simulated_os(hostname)  # Future remote support
+                os_name = self.get_simulated_os(hostname)  
                 self.Table.setItem(row, header_index["OS"], QTableWidgetItem(os_name))
 
-
-
-
-
-
-
-
-
+                free_gb, total_gb = self.get_simulated_disk_space(hostname)
+                self.set_disk_space_progress(row, header_index["Disk Space"], free_gb, total_gb)
 
 
 
@@ -290,7 +313,7 @@ class MyApp(QMainWindow):
         header = self.Table.horizontalHeader()
         for i in range(self.Table.columnCount()):
             col_name = self.Table.horizontalHeaderItem(i).text()
-            if col_name in ["OS", "Machine", "Servicing Stack", "Cumulative", "Install Status"]:
+            if col_name in ["OS", "Machine", "Servicing Stack", "Cumulative", "Install Status", "Disk Space"]:
                 header.setSectionResizeMode(i, QHeaderView.ResizeToContents)
             else:
                 header.setSectionResizeMode(i, QHeaderView.Stretch)

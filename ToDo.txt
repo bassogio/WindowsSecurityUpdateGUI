@@ -25,4 +25,5 @@ same as all but for selected machines
 
 
 # disk space
-show much  availabblle disk space there is and if its enough
+ccheck iiif there is enough space for installation
+if not ennough space - bar should be red
