@@ -398,7 +398,7 @@ class MyApp(QMainWindow):
 
         if scheduled_datetime <= QDateTime.currentDateTime():
             QMessageBox.warning(self, "Invalid Time", "Please select a future time.")
-            return  # <-- Don't close the window or save anything
+            return 
 
         self.scheduled_time = scheduled_datetime
         self.repeat_mode = {
@@ -414,7 +414,6 @@ class MyApp(QMainWindow):
         self.monitor_timer.start(10_000)
 
         self.Timing.accept()
-
 
     def check_if_time_reached(self):
         now = QDateTime.currentDateTime()

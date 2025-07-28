@@ -3,9 +3,15 @@ Should check KB of each installation - is service stack and cumulative alway the
 check instalation status
 
 # Schedual updates
+timestamp may be wrong
 make the repeat work
 save the users email
 select multiple dates?
+
+this print should happen only when okay is pressed
+        if scheduled_datetime <= QDateTime.currentDateTime():
+            QMessageBox.warning(self, "Invalid Time", "Please select a future time.")
+            return  # <-- Don't close the window or save anything
 
 # Update all
 make it update all
