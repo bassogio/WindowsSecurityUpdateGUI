@@ -347,12 +347,12 @@ class MyApp(QMainWindow):
             if machine_item:
                 hostname = machine_item.text()
 
-                os_name = self.get_simulated_os(hostname)
-                # os_name = self.get_remote_os(hostname)
+                # os_name = self.get_simulated_os(hostname)
+                os_name = self.get_remote_os(hostname)
                 self.Table.setItem(row, header_index["OS"], QTableWidgetItem(os_name))
 
-                free_gb, total_gb = self.get_simulated_disk_space(hostname)
-                # free_gb, total_gb = self.get_disk_space(hostname)
+                # free_gb, total_gb = self.get_simulated_disk_space(hostname)
+                free_gb, total_gb = self.get_disk_space(hostname)
                 self.set_disk_space_progress(row, header_index["Disk Space"], free_gb, total_gb)
 
 
