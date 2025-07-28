@@ -22,7 +22,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Set Email Adress for Alarts:</string>
+      <string>Set Email Address for Notifications:</string>
      </property>
     </widget>
    </item>

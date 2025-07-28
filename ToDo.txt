@@ -1,7 +1,5 @@
 # Reload
-Should check OS of every remote device
 Should check KB of each installation - is service stack and cumulative alway the same KB? 
-check disk space
 check instalation status
 
 # Schedual updates
