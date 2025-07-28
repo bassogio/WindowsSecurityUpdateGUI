@@ -20,3 +20,9 @@ same as all but for selected machines
 # Edit Help Center
 
 # Add reboot option?
+
+# Resize table with window
+
+
+# disk space
+show much  availabblle disk space there is and if its enough

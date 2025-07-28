@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1401</width>
-    <height>804</height>
+    <height>811</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -24,6 +24,15 @@
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetDefaultConstraint</enum>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="verticalSpacing">
+      <number>6</number>
+     </property>
      <item row="1" column="2">
       <widget class="QPushButton" name="Test">
        <property name="text">

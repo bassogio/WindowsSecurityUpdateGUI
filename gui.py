@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
 from PyQt5 import uic
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QTimer, QDateTime, Qt
+import random
 
 DATA_FILE = "table_data.json"
 
@@ -217,20 +218,86 @@ class MyApp(QMainWindow):
             print("No machines selected")
             return
         print(f"Applying updates to: {', '.join(selected_machines)}")
+    
+    def get_simulated_os(self, hostname):
+        # Simulated OS detection logic
+        simulated_os_list = [
+            "Windows 10 Enterprise", 
+            "Windows Server 2016", 
+            "Windows Server 2019", 
+            "Windows 10 Pro", 
+            "Windows 11", 
+            "Unknown"
+        ]
+        return random.choice(simulated_os_list)
+
+        import subprocess
+
+    def get_remote_os(self, hostname):
+        """
+        Returns the OS of a remote machine using native PowerShell.
+        Requires:
+            - Remote PowerShell enabled on the target
+            - Your user has access rights
+        """
+        import subprocess
+        try:
+            ps_command = f"Invoke-Command -ComputerName {hostname} -ScriptBlock {{ (Get-CimInstance Win32_OperatingSystem).Caption }}"
+            result = subprocess.run(
+                ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_command],
+                capture_output=True, text=True, timeout=10
+            )
+            output = result.stdout.strip()
+            error = result.stderr.strip()
+
+            if result.returncode != 0 or error:
+                return f"Error: {error}" if error else "Unknown error"
+            return output if output else "Unavailable"
+        except Exception as e:
+            return f"Exception: {str(e)}"
 
     def load(self):
         header_index = {self.Table.horizontalHeaderItem(i).text(): i for i in range(self.Table.columnCount())}
 
+        # for row in range(self.Table.rowCount()):
+        #     self.Table.setItem(row, header_index["OS"], QTableWidgetItem("Pending"))
+        #     self.Table.setItem(row, header_index["Servicing Stack"], QTableWidgetItem("Pending"))
+        #     self.Table.setItem(row, header_index["Cumulative"], QTableWidgetItem("Pending"))
+        #     self.Table.setItem(row, header_index["Disk Space"], QTableWidgetItem(""))
+
         for row in range(self.Table.rowCount()):
-            self.Table.setItem(row, header_index["OS"], QTableWidgetItem("Pending"))
-            self.Table.setItem(row, header_index["Servicing Stack"], QTableWidgetItem("Pending"))
-            self.Table.setItem(row, header_index["Cumulative"], QTableWidgetItem("Pending"))
-            self.Table.setItem(row, header_index["Install Status"], QTableWidgetItem(""))
+            machine_item = self.Table.item(row, 0)
+            if machine_item:
+                hostname = machine_item.text()
+                os_name = self.get_simulated_os(hostname)  # Future remote support
+                self.Table.setItem(row, header_index["OS"], QTableWidgetItem(os_name))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        header = self.Table.horizontalHeader()
+        for i in range(self.Table.columnCount()):
+            col_name = self.Table.horizontalHeaderItem(i).text()
+            if col_name in ["OS", "Machine", "Servicing Stack", "Cumulative", "Install Status"]:
+                header.setSectionResizeMode(i, QHeaderView.ResizeToContents)
+            else:
+                header.setSectionResizeMode(i, QHeaderView.Stretch)
 
         self.load_done = True
         self.set_button_visual_state(self.UpdateAll, inactive=False)
         self.set_button_visual_state(self.UpdateSelected, inactive=False)
-
 
     def ScheduleUpdatesWindow(self):
         self.Timing = QDialog(self)
@@ -275,7 +342,6 @@ class MyApp(QMainWindow):
                 self.load_done = False
                 self.set_button_visual_state(self.UpdateAll, inactive=True)
                 self.set_button_visual_state(self.UpdateSelected, inactive=True)
-
 
 def main():
     app = QApplication(sys.argv)
