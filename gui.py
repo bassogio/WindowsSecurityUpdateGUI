@@ -219,13 +219,18 @@ class MyApp(QMainWindow):
         print(f"Applying updates to: {', '.join(selected_machines)}")
 
     def load(self):
+        header_index = {self.Table.horizontalHeaderItem(i).text(): i for i in range(self.Table.columnCount())}
+
         for row in range(self.Table.rowCount()):
-            self.Table.setItem(row, 4, QTableWidgetItem("Pending"))
-            self.Table.setItem(row, 5, QTableWidgetItem("Pending"))
-            self.Table.setItem(row, 6, QTableWidgetItem(""))
+            self.Table.setItem(row, header_index["OS"], QTableWidgetItem("Pending"))
+            self.Table.setItem(row, header_index["Servicing Stack"], QTableWidgetItem("Pending"))
+            self.Table.setItem(row, header_index["Cumulative"], QTableWidgetItem("Pending"))
+            self.Table.setItem(row, header_index["Install Status"], QTableWidgetItem(""))
+
         self.load_done = True
         self.set_button_visual_state(self.UpdateAll, inactive=False)
         self.set_button_visual_state(self.UpdateSelected, inactive=False)
+
 
     def ScheduleUpdatesWindow(self):
         self.Timing = QDialog(self)
