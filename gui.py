@@ -105,8 +105,8 @@ class MyApp(QMainWindow):
         if hasattr(self, 'actionEdit_Table'):
             self.actionEdit_Table.triggered.connect(self.open_edit_table_dialog)
 
-        # if hasattr(self, 'actionChange_Path_to_Installation_Files'):
-        #     self.actionChange_Path_to_Installation_Files.triggered.connect()
+        if hasattr(self, 'actionChange_Path_to_Installation_Files'):
+            self.actionChange_Path_to_Installation_Files.triggered.connect(self.open_edit_path_dialog)
 
         self.UpdateAll.setEnabled(True)
         self.UpdateSelected.setEnabled(True)
@@ -342,23 +342,44 @@ class MyApp(QMainWindow):
     def load(self):
         header_index = {self.Table.horizontalHeaderItem(i).text(): i for i in range(self.Table.columnCount())}
 
+        # Load OS paths
+        if os.path.exists("os_paths.json"):
+            with open("os_paths.json", "r") as f:
+                os_paths = json.load(f)
+        else:
+            os_paths = {}
+
         for row in range(self.Table.rowCount()):
             machine_item = self.Table.item(row, 0)
             if machine_item:
                 hostname = machine_item.text()
 
-                # os_name = self.get_simulated_os(hostname)
-                os_name = self.get_remote_os(hostname)
+                os_name = self.get_simulated_os(hostname)
+                # os_name = self.get_remote_os(hostname)
                 self.Table.setItem(row, header_index["OS"], QTableWidgetItem(os_name))
 
-                # free_gb, total_gb = self.get_simulated_disk_space(hostname)
-                free_gb, total_gb = self.get_disk_space(hostname)
+                free_gb, total_gb = self.get_simulated_disk_space(hostname)
+                # free_gb, total_gb = self.get_disk_space(hostname)
                 self.set_disk_space_progress(row, header_index["Disk Space"], free_gb, total_gb)
 
-
-
-
-
+            
+                os_path = os_paths.get(os_name, "")
+                cumulative_kb = ""
+                servicing_stack_kb = ""
+                if os_path and os.path.isdir(os_path):
+                    for fname in os.listdir(os_path):
+                        # Cumulative KB
+                        if "Cumulative" in fname:
+                            kb_match = self.extract_kb_from_filename(fname)
+                            if kb_match:
+                                cumulative_kb = kb_match
+                        # Servicing Stack KB
+                        if "Servicing Stack" in fname:
+                            kb_match = self.extract_kb_from_filename(fname)
+                            if kb_match:
+                                servicing_stack_kb = kb_match
+                self.Table.setItem(row, header_index.get("Cumulative", -1), QTableWidgetItem(cumulative_kb))
+                self.Table.setItem(row, header_index.get("Servicing Stack", -1), QTableWidgetItem(servicing_stack_kb))
 
         header = self.Table.horizontalHeader()
         for i in range(self.Table.columnCount()):
@@ -372,6 +393,13 @@ class MyApp(QMainWindow):
         self.set_button_visual_state(self.UpdateAll, inactive=False)
         self.set_button_visual_state(self.UpdateSelected, inactive=False)
         self.set_button_visual_state(self.ScheduleTheUpdates, inactive=False)
+
+    def extract_kb_from_filename(self, fname):
+        import re
+        match = re.search(r'KB(\d+)', fname)
+        if match:
+            return f"KB{match.group(1)}"
+        return ""
 
     def ScheduleUpdatesWindow(self):
         if not self.load_done:
@@ -482,6 +510,93 @@ class MyApp(QMainWindow):
                 self.load_done = False
                 self.set_button_visual_state(self.UpdateAll, inactive=True)
                 self.set_button_visual_state(self.UpdateSelected, inactive=True)
+
+    def open_edit_path_dialog(self):
+        from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QFileDialog, QGridLayout
+
+        class PathDialog(QDialog):
+            def __init__(self, parent, os_list, os_paths):
+                super().__init__(parent)
+                self.setWindowTitle("Edit Installation Paths by OS")
+                self.resize(600, 300)
+                self.os_list = os_list
+                self.os_paths = os_paths.copy()
+                self.edits = {}
+
+                layout = QGridLayout()
+                for i, os_name in enumerate(os_list):
+                    label = QLabel(os_name)
+                    edit = QLineEdit(os_paths.get(os_name, ""))
+                    browse_btn = QPushButton("Browse")
+                    browse_btn.clicked.connect(lambda _, e=edit: self.browse_folder(e))
+                    layout.addWidget(label, i, 0)
+                    layout.addWidget(edit, i, 1)
+                    layout.addWidget(browse_btn, i, 2)
+                    self.edits[os_name] = edit
+
+                self.update_btn = QPushButton("Update")
+                self.close_btn = QPushButton("Close")
+                layout.addWidget(self.update_btn, len(os_list), 1)
+                layout.addWidget(self.close_btn, len(os_list), 2)
+                self.setLayout(layout)
+
+                self.update_btn.clicked.connect(self.update_paths)
+                self.close_btn.clicked.connect(self.confirm_close)
+                self.changes_saved = False
+
+            def browse_folder(self, edit):
+                folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+                if folder:
+                    edit.setText(folder)
+
+            def update_paths(self):
+                for os_name, edit in self.edits.items():
+                    self.os_paths[os_name] = edit.text()
+                with open("os_paths.json", "w") as f:
+                    json.dump(self.os_paths, f, indent=2)
+                self.changes_saved = True
+                QMessageBox.information(self, "Saved", "Paths updated successfully.")
+
+            def confirm_close(self):
+                if not self.changes_saved:
+                    reply = QMessageBox.question(
+                        self,
+                        "Exit Without Saving",
+                        "Are you sure you want to exit without updating the changes?",
+                        QMessageBox.Yes | QMessageBox.No,
+                        QMessageBox.No
+                    )
+                    if reply == QMessageBox.Yes:
+                        self.reject()
+                        return
+                    else:
+                        return
+                self.accept()
+
+        # Gather OSs from table (excluding "Unknown")
+        os_set = set()
+        header_index = {self.Table.horizontalHeaderItem(i).text(): i for i in range(self.Table.columnCount())}
+        os_col = header_index.get("OS")
+        if os_col is None:
+            QMessageBox.warning(self, "Error", "No OS column found.")
+            return
+        for row in range(self.Table.rowCount()):
+            item = self.Table.item(row, os_col)
+            if item:
+                os_name = item.text()
+                if os_name and os_name != "Unknown":
+                    os_set.add(os_name)
+        os_list = sorted(os_set)
+
+        # Load current paths
+        if os.path.exists("os_paths.json"):
+            with open("os_paths.json", "r") as f:
+                os_paths = json.load(f)
+        else:
+            os_paths = {}
+
+        dialog = PathDialog(self, os_list, os_paths)
+        dialog.exec_()
 
     def closeEvent(self, event):
         reply = QMessageBox.question(
