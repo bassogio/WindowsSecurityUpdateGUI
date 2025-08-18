@@ -434,6 +434,8 @@ class MyApp(QMainWindow):
             "monthly": self.Timing.RepeatMonth.isChecked(),
             "yearly": self.Timing.RepeatYear.isChecked()
         }
+        # Get email address from the input field
+        self.notification_email = self.Timing.EmailInput.text()
 
         self.save_schedule()
 
@@ -449,7 +451,7 @@ class MyApp(QMainWindow):
             self.monitor_timer.stop()
             self.run_scheduled_updates()
 
-    def run_scheduled_updates(self):
+    def run_scheduled_updates(self):        
         machine_list = self.get_machine_list_from_table()
         self.apply_updates(machine_list)
         QMessageBox.information(self, "Updates Started", f"Scheduled update started at {QDateTime.currentDateTime().toString()}")
@@ -461,7 +463,10 @@ class MyApp(QMainWindow):
     def save_schedule(self):
         data = {
             "timestamp": self.scheduled_time.toSecsSinceEpoch(),
-            "repeat": self.repeat_mode
+            "date": self.scheduled_time.toString("yyyy-MM-dd"),
+            "time": self.scheduled_time.toString("HH:mm:ss"),
+            "repeat": self.repeat_mode,
+            "email": getattr(self, "notification_email", "")
         }
         with open("schedule.json", "w") as f:
             json.dump(data, f, indent=2)
