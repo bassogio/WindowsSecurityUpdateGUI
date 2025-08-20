@@ -29,6 +29,8 @@ check how to attach file
 
 Send-MailMessage -From "security.updates@internal.com" -To "andrey.palamarchuk@icl-group.com" -Subject "Test Email" -Body "This is a test message." -SmtpServer "172.23.1.100"
 
+!!!!!!!! When schedualed update was done, send an email !!!!!!!
+
 
 Things to consider when updating:
 First check if there is enough space: Yes: Continue | NO: Error and skip
