@@ -126,6 +126,9 @@ class MyApp(QMainWindow):
         self.load_table_data()
         self.update_row_headers()
         self.load_schedule()
+        
+        self.scheduled_dates = getattr(self, "scheduled_dates", [])
+
 
         self.scheduled_update_executed = False 
 
@@ -202,7 +205,7 @@ class MyApp(QMainWindow):
             self.Table.setVerticalHeaderItem(row, QTableWidgetItem(str(row)))
 
     def show_warning(self):
-        QMessageBox.warning(self, "Load Required", "Please press the Reload button before updating.")
+        QMessageBox.warning(self, "Load Required", "Please press the Load button before updating.")
 
     def get_machine_list_from_table(self):
         return [self.Table.item(row, 0).text() for row in range(self.Table.rowCount()) if self.Table.item(row, 0)]
@@ -411,11 +414,30 @@ class MyApp(QMainWindow):
         if not self.load_done:
             self.show_warning()
             return
-        
+
         self.Timing = QDialog(self)
         uic.loadUi('ScheduleUpdates.ui', self.Timing)
 
-        self.Timing.OkCancle.clicked.connect(self.schedule_updates_task)
+        # Work on a temp list while the dialog is open
+        self.temp_scheduled_dates = [dict(d) for d in self.scheduled_dates]
+
+        # Ensure the button box doesn't auto-close the dialog
+        try:
+            self.Timing.OkCancle.accepted.disconnect()
+            self.Timing.OkCancle.rejected.disconnect()
+        except TypeError:
+            pass  # nothing was connected by the .ui
+
+        ok_btn = self.Timing.OkCancle.button(QDialogButtonBox.Ok)
+        cancel_btn = self.Timing.OkCancle.button(QDialogButtonBox.Cancel)
+        ok_btn.clicked.connect(self.schedule_updates_task)
+        cancel_btn.clicked.connect(self.cancel_schedule_window)
+
+        # Buttons that edit dates operate on the temp list
+        self.Timing.AddDateButton.clicked.connect(self.add_date)
+        self.Timing.RemoveDateButton.clicked.connect(self.remove_selected_date)
+
+        self.populate_dates_listwidget()  # show temp list
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_time)
@@ -425,61 +447,114 @@ class MyApp(QMainWindow):
         self.Timing.setModal(True)
         self.Timing.show()
 
+    def cancel_schedule_window(self):
+        # Discard temp changes and just close
+        self.Timing.reject()
+
+    def add_date(self):
+        date_str = self.Timing.SetDate.selectedDate().toString("yyyy-MM-dd")
+        time_str = self.Timing.SetTime.time().toString("HH:mm:ss")
+        entry = {"date": date_str, "time": time_str}
+        if entry not in self.temp_scheduled_dates:
+            self.temp_scheduled_dates.append(entry)
+            self.Timing.DatesListWidget.addItem(f"{date_str} {time_str}")
+
+    def remove_selected_date(self):
+        selected_items = self.Timing.DatesListWidget.selectedItems()
+        for item in selected_items:
+            date_part, time_part = item.text().split(" ")
+            self.temp_scheduled_dates = [
+                d for d in self.temp_scheduled_dates
+                if not (d.get("date") == date_part and d.get("time") == time_part)
+            ]
+            self.Timing.DatesListWidget.takeItem(self.Timing.DatesListWidget.row(item))
+
+
     def schedule_updates_task(self):
         date = self.Timing.SetDate.selectedDate()
         time = self.Timing.SetTime.time()
         scheduled_datetime = QDateTime(date, time)
+        now = QDateTime.currentDateTime()
 
-        if scheduled_datetime <= QDateTime.currentDateTime():
-            QMessageBox.warning(self, "Invalid Time", "Please select a future time.")
-            return 
+        # 1) Validate the currently selected date/time
+        if scheduled_datetime <= now:
+            sel_str = scheduled_datetime.toString("yyyy-MM-dd HH:mm:ss")
+            now_str = now.toString("yyyy-MM-dd HH:mm:ss")
+            QMessageBox.warning(
+                self.Timing,
+                "Invalid Time",
+                f"The selected time ({sel_str}) is not in the future.\n"
+                f"Current time is {now_str}.\nPlease pick a future date/time."
+            )
+            self.Timing.SetTime.setFocus()
+            return  # keep dialog open
 
+        # 2) Validate all entries in the list and name the bad ones
+        invalid_entries = []
+        for d in self.temp_scheduled_dates:
+            dt = QDateTime.fromString(f"{d.get('date','')} {d.get('time','')}", "yyyy-MM-dd HH:mm:ss")
+            if dt.isValid() and dt <= now:
+                invalid_entries.append(dt.toString("yyyy-MM-dd HH:mm:ss"))
+
+        if invalid_entries:
+            bad = "\n • ".join(invalid_entries)
+            QMessageBox.warning(
+                self.Timing,
+                "Invalid Time(s)",
+                "These scheduled times are not in the future:\n"
+                f" • {bad}\n\nPlease adjust or remove them."
+            )
+            self.Timing.DatesListWidget.setFocus()
+            return  # keep dialog open
+
+        # Commit only after all validations pass
+        self.scheduled_dates = [dict(d) for d in self.temp_scheduled_dates]
         self.scheduled_time = scheduled_datetime
-        self.repeat_mode = {
-            "weekly": self.Timing.RepeatWeek.isChecked(),
-            "monthly": self.Timing.RepeatMonth.isChecked(),
-            "yearly": self.Timing.RepeatYear.isChecked(),
-        }
-        # Get email address from the input field
         self.notification_email = self.Timing.EmailInput.text()
 
         self.save_schedule()
+        self.load_schedule()   # reload schedule (UI + future dates detection)
 
-        self.monitor_timer = QTimer(self)
-        self.monitor_timer.timeout.connect(self.check_if_time_reached)
-        self.monitor_timer.start(10_000)
+        # REPLACE the manual timer setup with:
+        self.start_monitor()
 
-        self.Timing.accept()
-            
+        self.Timing.accept()  # close only after success
+
     def check_if_time_reached(self):
         now = QDateTime.currentDateTime()
-        # Only run if not already executed and the current time matches the scheduled time exactly
-        if (
-            not self.scheduled_update_executed
-            and now.toString("yyyy-MM-dd HH:mm") == self.scheduled_time.toString("yyyy-MM-dd HH:mm")
-        ):
-            self.scheduled_update_executed = True
-            self.monitor_timer.stop()
+        due_found = False
+        remaining = []
+
+        for entry in list(self.scheduled_dates):
+            if not isinstance(entry, dict):
+                continue
+            dt = QDateTime.fromString(f"{entry.get('date','')} {entry.get('time','')}", "yyyy-MM-dd HH:mm:ss")
+            if not dt.isValid():
+                continue
+
+            if dt <= now:
+                due_found = True
+            else:
+                remaining.append(entry)
+
+        if due_found:
+            # commit list changes first to avoid re-entrancy
+            self.scheduled_dates = remaining
+            self.save_schedule()
+            # run exactly once per tick even if multiple entries were due
             self.run_scheduled_updates()
+
+        # Stop monitor if nothing left; otherwise keep ticking
+        if not self.scheduled_dates:
+            try:
+                self.monitor_timer.stop()
+            except AttributeError:
+                pass
 
     def run_scheduled_updates(self):        
         machine_list = self.get_machine_list_from_table()
         self.apply_updates(machine_list)
         QMessageBox.information(self, "Updates Started", f"Scheduled update started at {QDateTime.currentDateTime().toString()}")
-
-        # Handle repeat modes
-        if self.repeat_mode.get("weekly", False):
-            self.scheduled_time = self.scheduled_time.addDays(7)
-        elif self.repeat_mode.get("monthly", False):
-            self.scheduled_time = self.scheduled_time.addMonths(1)
-        elif self.repeat_mode.get("yearly", False):
-            self.scheduled_time = self.scheduled_time.addYears(1)
-        else:
-            return  # No repeat, just exit
-
-        self.save_schedule()
-        self.scheduled_update_executed = False
-        self.monitor_timer.start(10_000)
 
     def update_time(self):
         current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
@@ -487,32 +562,46 @@ class MyApp(QMainWindow):
 
     def save_schedule(self):
         data = {
-            "timestamp": self.scheduled_time.toSecsSinceEpoch(),
-            "date": self.scheduled_time.toString("yyyy-MM-dd"),
-            "time": self.scheduled_time.toString("HH:mm:ss"),
-            "repeat": self.repeat_mode,
+            "dates": self.scheduled_dates,  # List of dicts: {"date": "...", "time": "..."}
             "email": getattr(self, "notification_email", "")
         }
         with open("schedule.json", "w") as f:
             json.dump(data, f, indent=2)
+    
+    def start_monitor(self):
+        # Ensure a single timer instance
+        if hasattr(self, "monitor_timer"):
+            try:
+                self.monitor_timer.stop()
+            except Exception:
+                pass
+        else:
+            self.monitor_timer = QTimer(self)
+            self.monitor_timer.timeout.connect(self.check_if_time_reached)
+        self.monitor_timer.start(1000)  # 1s granularity
 
     def load_schedule(self):
+        self.scheduled_dates = []
+
+        self.notification_email = ""
         if os.path.exists("schedule.json"):
             with open("schedule.json", "r") as f:
                 data = json.load(f)
-                ts = data.get("timestamp")
-                if ts:
-                    self.scheduled_time = QDateTime.fromSecsSinceEpoch(ts)
-                    self.repeat_mode = data.get("repeat", {
-                        "weekly": False,
-                        "monthly": False,
-                        "yearly": False
-                    })
-                    # Only start timer if scheduled time is in the future
-                    if QDateTime.currentDateTime() < self.scheduled_time:
-                        self.monitor_timer = QTimer(self)
-                        self.monitor_timer.timeout.connect(self.check_if_time_reached)
-                        self.monitor_timer.start(10_000)
+            self.scheduled_dates = data.get("dates", [])
+            self.notification_email = data.get("email", "")
+
+        # If any date/time is still in the future, start the monitor
+        now = QDateTime.currentDateTime()
+        has_future = False
+        for d in self.scheduled_dates:
+            dt = QDateTime.fromString(f"{d.get('date','')} {d.get('time','')}", "yyyy-MM-dd HH:mm:ss")
+            if dt.isValid() and dt > now:
+                has_future = True
+                break
+
+        if has_future:
+            self.start_monitor()
+
 
     def open_edit_table_dialog(self):
         headers = [self.Table.horizontalHeaderItem(i).text() for i in range(self.Table.columnCount())]
@@ -646,6 +735,15 @@ class MyApp(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
+    def populate_dates_listwidget(self):
+        self.Timing.DatesListWidget.clear()
+        # Use temp list if present (dialog open), else the committed list
+        src = getattr(self, "temp_scheduled_dates", self.scheduled_dates)
+        for entry in src:
+            if isinstance(entry, dict):
+                self.Timing.DatesListWidget.addItem(f'{entry.get("date","")} {entry.get("time","")}')
+
 
 def main():
     app = QApplication(sys.argv)

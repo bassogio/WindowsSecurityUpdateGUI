@@ -3,10 +3,7 @@ Should check KB of each installation - is service stack and cumulative alway the
 check instalation status
 
 # Schedual updates
-timestamp may be wrong
-make the repeat work
-save the users email
-select multiple dates?
+email thingy
 
 this print should happen only when okay is pressed
         if scheduled_datetime <= QDateTime.currentDateTime():
@@ -27,5 +24,19 @@ same as all but for selected machines
 # Resize table with window
 
 # disk space
-ccheck iiif there is enough space for installation
+check if there is enough space for installation
 if not ennough space - bar should be red
+
+
+
+
+
+email server: 172.23.1.100
+
+SMTP protocol 
+
+From: security.updates@internal.com
+
+check how to attach file
+
+Send-MailMessage -From "me@example.com" -To "andrey.palamarchuk@icl-group.com" -Subject "Test Email" -Body "This is a test message." -SmtpServer "172.23.1.100"
