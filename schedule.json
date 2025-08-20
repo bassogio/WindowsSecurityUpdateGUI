@@ -1,4 +1,11 @@
 {
-  "dates": [],
-  "email": ""
+  "dates": [
+    {
+      "date": "2025-08-21",
+      "time": "00:00:00"
+    }
+  ],
+  "Email server": "test",
+  "From email": "test",
+  "To email": "test"
 }

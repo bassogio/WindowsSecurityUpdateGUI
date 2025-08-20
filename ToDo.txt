@@ -1,14 +1,21 @@
-# Reload
+# Load
 Should check KB of each installation - is service stack and cumulative alway the same KB? 
 check instalation status
 
 # Schedual updates
-email thingy
+show server and emails in text box
 
-this print should happen only when okay is pressed
-        if scheduled_datetime <= QDateTime.currentDateTime():
-            QMessageBox.warning(self, "Invalid Time", "Please select a future time.")
-            return  # <-- Don't close the window or save anything
+Send Email after each update with a file where you can see everything you need
+
+email server: 172.23.1.100
+
+SMTP protocol 
+
+From: security.updates@internal.com
+
+check how to attach file
+
+Send-MailMessage -From "security.updates@internal.com" -To "andrey.palamarchuk@icl-group.com" -Subject "Test Email" -Body "This is a test message." -SmtpServer "172.23.1.100"
 
 # Update all
 make it update all
@@ -31,12 +38,3 @@ if not ennough space - bar should be red
 
 
 
-email server: 172.23.1.100
-
-SMTP protocol 
-
-From: security.updates@internal.com
-
-check how to attach file
-
-Send-MailMessage -From "me@example.com" -To "andrey.palamarchuk@icl-group.com" -Subject "Test Email" -Body "This is a test message." -SmtpServer "172.23.1.100"

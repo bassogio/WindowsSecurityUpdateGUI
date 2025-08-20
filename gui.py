@@ -129,7 +129,6 @@ class MyApp(QMainWindow):
         
         self.scheduled_dates = getattr(self, "scheduled_dates", [])
 
-
         self.scheduled_update_executed = False 
 
         if hasattr(self, 'actionHelp_Center'):
@@ -469,7 +468,6 @@ class MyApp(QMainWindow):
             ]
             self.Timing.DatesListWidget.takeItem(self.Timing.DatesListWidget.row(item))
 
-
     def schedule_updates_task(self):
         date = self.Timing.SetDate.selectedDate()
         time = self.Timing.SetTime.time()
@@ -510,7 +508,9 @@ class MyApp(QMainWindow):
         # Commit only after all validations pass
         self.scheduled_dates = [dict(d) for d in self.temp_scheduled_dates]
         self.scheduled_time = scheduled_datetime
-        self.notification_email = self.Timing.EmailInput.text()
+        self.Server = self.Timing.EmailServer.text()
+        self.FromEmail = self.Timing.FromEmail.text()
+        self.ToEmail = self.Timing.ToEmail.text()
 
         self.save_schedule()
         self.load_schedule()   # reload schedule (UI + future dates detection)
@@ -563,7 +563,9 @@ class MyApp(QMainWindow):
     def save_schedule(self):
         data = {
             "dates": self.scheduled_dates,  # List of dicts: {"date": "...", "time": "..."}
-            "email": getattr(self, "notification_email", "")
+            "Email server": getattr(self, "Server", ""),
+            "From email": getattr(self, "FromEmail", ""),
+            "To email": getattr(self, "ToEmail", "")
         }
         with open("schedule.json", "w") as f:
             json.dump(data, f, indent=2)
@@ -583,12 +585,13 @@ class MyApp(QMainWindow):
     def load_schedule(self):
         self.scheduled_dates = []
 
-        self.notification_email = ""
         if os.path.exists("schedule.json"):
             with open("schedule.json", "r") as f:
                 data = json.load(f)
             self.scheduled_dates = data.get("dates", [])
-            self.notification_email = data.get("email", "")
+            self.Server = data.get("Email server", "")
+            self.FromEmail = data.get("From email", "")
+            self.ToEmail = data.get("To email", "")
 
         # If any date/time is still in the future, start the monitor
         now = QDateTime.currentDateTime()
@@ -743,7 +746,7 @@ class MyApp(QMainWindow):
         for entry in src:
             if isinstance(entry, dict):
                 self.Timing.DatesListWidget.addItem(f'{entry.get("date","")} {entry.get("time","")}')
-
+  
 
 def main():
     app = QApplication(sys.argv)
