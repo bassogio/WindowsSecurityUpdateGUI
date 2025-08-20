@@ -605,7 +605,6 @@ class MyApp(QMainWindow):
         if has_future:
             self.start_monitor()
 
-
     def open_edit_table_dialog(self):
         headers = [self.Table.horizontalHeaderItem(i).text() for i in range(self.Table.columnCount())]
         table_data = [
@@ -747,7 +746,6 @@ class MyApp(QMainWindow):
             if isinstance(entry, dict):
                 self.Timing.DatesListWidget.addItem(f'{entry.get("date","")} {entry.get("time","")}')
   
-
 def main():
     app = QApplication(sys.argv)
     window = MyApp()

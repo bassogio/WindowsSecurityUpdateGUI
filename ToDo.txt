@@ -1,6 +1,6 @@
 # Load
 Should check KB of each installation - is service stack and cumulative alway the same KB? 
-check instalation status
+check installation status
 __________________________________________________________
 # disk space
 check if there is enough space for installation
@@ -34,6 +34,7 @@ Send-MailMessage -From "security.updates@internal.com" -To "andrey.palamarchuk@i
 
 Things to consider when updating:
 First check if there is enough space: Yes: Continue | NO: Error and skip
+Check if the machine already have the most updated instalation (compare KB)
 Try to install Service Stack: Installed: Continue and paint cell in green | Something went wrong: Error message in Notes, paint cell in red  and skip
 Try to install Comulative: Installed: Success | Failed: Error in Notes, paint cell in red and skip
 __________________________________________________________
