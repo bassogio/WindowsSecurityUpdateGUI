@@ -94,6 +94,10 @@ class MyApp(QMainWindow):
         super().__init__()
         uic.loadUi("WindowsSecurityUpdateMainWindow.ui", self)
 
+        self.Table.setTextElideMode(Qt.ElideNone)
+        self.Table.setWordWrap(True)
+        self.Table.resizeRowsToContents()
+
         self.load_done = False
         self.Load.clicked.connect(self.load) 
         self.UpdateAll.clicked.connect(self.on_update_all_clicked)
@@ -122,6 +126,8 @@ class MyApp(QMainWindow):
         self.load_table_data()
         self.update_row_headers()
         self.load_schedule()
+
+        self.scheduled_update_executed = False 
 
         if hasattr(self, 'actionHelp_Center'):
             self.actionHelp_Center.triggered.connect(self.toggle_help_panel)
@@ -432,7 +438,7 @@ class MyApp(QMainWindow):
         self.repeat_mode = {
             "weekly": self.Timing.RepeatWeek.isChecked(),
             "monthly": self.Timing.RepeatMonth.isChecked(),
-            "yearly": self.Timing.RepeatYear.isChecked()
+            "yearly": self.Timing.RepeatYear.isChecked(),
         }
         # Get email address from the input field
         self.notification_email = self.Timing.EmailInput.text()
@@ -444,10 +450,15 @@ class MyApp(QMainWindow):
         self.monitor_timer.start(10_000)
 
         self.Timing.accept()
-
+            
     def check_if_time_reached(self):
         now = QDateTime.currentDateTime()
-        if now >= self.scheduled_time:
+        # Only run if not already executed and the current time matches the scheduled time exactly
+        if (
+            not self.scheduled_update_executed
+            and now.toString("yyyy-MM-dd HH:mm") == self.scheduled_time.toString("yyyy-MM-dd HH:mm")
+        ):
+            self.scheduled_update_executed = True
             self.monitor_timer.stop()
             self.run_scheduled_updates()
 
@@ -455,7 +466,21 @@ class MyApp(QMainWindow):
         machine_list = self.get_machine_list_from_table()
         self.apply_updates(machine_list)
         QMessageBox.information(self, "Updates Started", f"Scheduled update started at {QDateTime.currentDateTime().toString()}")
-        
+
+        # Handle repeat modes
+        if self.repeat_mode.get("weekly", False):
+            self.scheduled_time = self.scheduled_time.addDays(7)
+        elif self.repeat_mode.get("monthly", False):
+            self.scheduled_time = self.scheduled_time.addMonths(1)
+        elif self.repeat_mode.get("yearly", False):
+            self.scheduled_time = self.scheduled_time.addYears(1)
+        else:
+            return  # No repeat, just exit
+
+        self.save_schedule()
+        self.scheduled_update_executed = False
+        self.monitor_timer.start(10_000)
+
     def update_time(self):
         current_time = QDateTime.currentDateTime().toString("yyyy-MM-dd HH:mm:ss")
         self.Timing.TimeAndDateLabel.setText(current_time)
@@ -483,9 +508,11 @@ class MyApp(QMainWindow):
                         "monthly": False,
                         "yearly": False
                     })
-                    self.monitor_timer = QTimer(self)
-                    self.monitor_timer.timeout.connect(self.check_if_time_reached)
-                    self.monitor_timer.start(10_000)
+                    # Only start timer if scheduled time is in the future
+                    if QDateTime.currentDateTime() < self.scheduled_time:
+                        self.monitor_timer = QTimer(self)
+                        self.monitor_timer.timeout.connect(self.check_if_time_reached)
+                        self.monitor_timer.start(10_000)
 
     def open_edit_table_dialog(self):
         headers = [self.Table.horizontalHeaderItem(i).text() for i in range(self.Table.columnCount())]

@@ -1,9 +1,12 @@
 {
-  "timestamp": 1755509280,
+  "timestamp": 1755670380,
+  "date": "2025-08-20",
+  "time": "09:13:00",
   "repeat": {
     "weekly": false,
     "monthly": false,
-    "yearly": false
+    "yearly": false,
+    "test_2min": true
   },
-  "email": "test"
+  "email": ""
 }
