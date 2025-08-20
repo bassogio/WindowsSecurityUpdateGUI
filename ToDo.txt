@@ -1,6 +1,18 @@
 # Load
 Should check KB of each installation - is service stack and cumulative alway the same KB? 
 check instalation status
+__________________________________________________________
+# disk space
+check if there is enough space for installation
+if not ennough space - bar should be red
+how do i know how much space is needed?
+__________________________________________________________
+# Update all
+make it update all
+should update instalation status while running
+
+# Update selected
+same as all but for selected machines
 
 # Schedual updates
 show server and emails in text box
@@ -17,22 +29,20 @@ check how to attach file
 
 Send-MailMessage -From "security.updates@internal.com" -To "andrey.palamarchuk@icl-group.com" -Subject "Test Email" -Body "This is a test message." -SmtpServer "172.23.1.100"
 
-# Update all
-make it update all
-should update instalation status while running
 
-# Update selected
-same as all but for selected machines
+Things to consider when updating:
+First check if there is enough space: Yes: Continue | NO: Error and skip
+Try to install Service Stack: Installed: Continue and paint cell in green | Something went wrong: Error message in Notes, paint cell in red  and skip
+Try to install Comulative: Installed: Success | Failed: Error in Notes, paint cell in red and skip
+__________________________________________________________
+# Create an Orgenized File where all the outputs are written
+maybe somehow add colors to mark what went good and what didnt
 
+__________________________________________________________
 # Edit Help Center
-
+__________________________________________________________
 # Add reboot option?
-
-# Resize table with window
-
-# disk space
-check if there is enough space for installation
-if not ennough space - bar should be red
+__________________________________________________________
 
 
 
