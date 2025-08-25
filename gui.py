@@ -9,6 +9,9 @@ from PyQt5.QtWidgets import (
 from PyQt5 import uic
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QTimer, QDateTime, Qt
+from PyQt5.QtGui import QTextDocument, QPageSize, QPageLayout
+from PyQt5.QtPrintSupport import QPrinter
+from PyQt5.QtCore import QMarginsF, QRectF
 
 DATA_FILE = "table_data.json" 
 
@@ -227,8 +230,19 @@ class MyApp(QMainWindow):
         if not selected_machines:
             print("No machines selected")
             return
-        print(f"Applying updates to: {', '.join(selected_machines)}")
-    
+
+        # Determine mode by comparing selection vs. all rows
+        all_machines = set(self.get_machine_list_from_table())
+        mode = "Update All" if set(selected_machines) == all_machines else "Update Selected"
+
+        started_at = QDateTime.currentDateTime()
+        print(f"[{mode}] Applying updates to: {', '.join(selected_machines)}")
+
+        finished_at = QDateTime.currentDateTime()
+
+        # Always generate a report for EVERY machine (as requested)
+        self.generate_pdf_report(mode=mode, started_at=started_at, finished_at=finished_at)
+
     def get_simulated_os(self, hostname):
         # Simulated OS detection logic
         import random
@@ -745,7 +759,205 @@ class MyApp(QMainWindow):
         for entry in src:
             if isinstance(entry, dict):
                 self.Timing.DatesListWidget.addItem(f'{entry.get("date","")} {entry.get("time","")}')
-  
+
+    def _header_index_map(self):
+        return {
+            self.Table.horizontalHeaderItem(i).text().strip(): i
+            for i in range(self.Table.columnCount())
+        }
+
+    def _get_cell_text(self, row, col):
+        """Prefer item text; if there's a QProgressBar (Disk Space), use its visible text."""
+        item = self.Table.item(row, col)
+        if item and item.text():
+            return item.text()
+        w = self.Table.cellWidget(row, col)
+        if isinstance(w, QProgressBar):
+            return w.text() or f"{w.value()}%"
+        return ""
+
+    def row_to_dict(self, row_index):
+        cols = self._header_index_map()
+        want = ["Machine", "OS", "Disk Space", "Servicing Stack", "Cumulative", "KB", "Install Status", "Notes"]
+        out = {}
+        for name in want:
+            ci = cols.get(name, -1)
+            out[name] = self._get_cell_text(row_index, ci) if ci >= 0 else ""
+        return out
+
+    def collect_all_rows(self):
+        return [self.row_to_dict(r) for r in range(self.Table.rowCount())]
+
+    def build_report_html(self, meta, rows):
+        # derive success/failure counts
+        succ_keys = {"success", "succeeded", "installed"}
+        fail_keys = {"fail", "failed", "error"}
+        success = sum(1 for r in rows if any(k in r["Install Status"].lower() for k in succ_keys))
+        failed  = sum(1 for r in rows if any(k in r["Install Status"].lower() for k in fail_keys))
+
+        started   = meta.get("started_at_str", "")
+        finished  = meta.get("finished_at_str", "")
+        elapsed   = meta.get("elapsed_str", "")
+        mode      = meta.get("mode", "")
+
+        # Simple, print-friendly CSS (A4, no external fonts)
+        css = """
+        <style>
+          * { box-sizing: border-box; }
+          body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; margin: 0; }
+          h1 { font-size: 16pt; margin: 6pt 0 2pt 0; }
+          .meta { margin: 0 0 10pt 0; }
+          .meta div { margin: 2pt 0; }
+          table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+          thead { display: table-header-group; }
+          tfoot { display: table-row-group; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+          th, td { border: 1px solid #999; padding: 6pt 5pt; vertical-align: top; }
+          th { background: #f2f2f2; text-align: left; }
+          .status-success { color: #0a7d2a; font-weight: bold; }
+          .status-failed  { color: #b00020; font-weight: bold; }
+          .small { color: #555; font-size: 9pt; }
+        </style>
+        """
+
+        # Build table rows with conditional class on Install Status
+        def status_class(s):
+            s_low = s.lower()
+            if any(k in s_low for k in succ_keys):
+                return "status-success"
+            if any(k in s_low for k in fail_keys):
+                return "status-failed"
+            return ""
+
+        row_html = []
+        for r in rows:
+            row_html.append(f"""
+              <tr>
+                <td>{r['Machine']}</td>
+                <td>{r['OS']}</td>
+                <td>{r['Disk Space']}</td>
+                <td>{r['Servicing Stack']}</td>
+                <td>{r['Cumulative']}</td>
+                <td>{r['KB']}</td>
+                <td class="{status_class(r['Install Status'])}">{r['Install Status']}</td>
+                <td>{r['Notes']}</td>
+              </tr>
+            """)
+
+        html = f"""
+        <html>
+          <head>{css}</head>
+          <body>
+            <h1>Windows Update Report</h1>
+            <div class="meta">
+              <div><b>Mode:</b> {mode}</div>
+              <div><b>Started:</b> {started}</div>
+              <div><b>Finished:</b> {finished}</div>
+              <div><b>Elapsed:</b> {elapsed}</div>
+              <div><b>Summary:</b> Success: {success} &nbsp;&nbsp; Failed: {failed} &nbsp;&nbsp; Total: {len(rows)}</div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Machine</th>
+                  <th>OS</th>
+                  <th>Disk Space</th>
+                  <th>Servicing Stack</th>
+                  <th>Cumulative</th>
+                  <th>KB</th>
+                  <th>Install Status</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {''.join(row_html)}
+              </tbody>
+            </table>
+            <div class="small" style="margin-top:8pt;">Generated on {finished}</div>
+          </body>
+        </html>
+        """
+        return html
+
+    def save_pdf(self, html, out_path):
+        # Prepare printer
+        printer = QPrinter(QPrinter.HighResolution)
+        printer.setOutputFormat(QPrinter.PdfFormat)
+        printer.setOutputFileName(out_path)
+        layout = QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait, QMarginsF(15, 15, 18, 18))  # mm
+        printer.setPageLayout(layout)
+
+        # Lay out the document at page size (points)
+        doc = QTextDocument()
+        doc.setHtml(html)
+        doc.setPageSize(printer.pageRect(QPrinter.Point).size())
+
+        # Manual paginate so we can draw "Page X of Y"
+        from PyQt5.QtGui import QPainter
+        painter = QPainter(printer)
+
+        # Metrics in points
+        page_rect_pt = QRectF(printer.pageRect(QPrinter.Point))
+        page_h = page_rect_pt.height()
+        page_w = page_rect_pt.width()
+        footer_h = 20.0  # points reserved for footer
+
+        # Count pages after layout
+        page_count = doc.documentLayout().pageCount()
+        if page_count < 1:
+            page_count = 1
+
+        for i in range(page_count):
+            if i > 0:
+                printer.newPage()
+
+            # Draw document slice for this page with a clip (leave room for footer)
+            painter.save()
+            clip = QRectF(page_rect_pt.left(), page_rect_pt.top(), page_w, page_h - footer_h)
+            painter.setClipRect(clip)
+            painter.translate(0, -i * page_h)  # show the slice for page i
+            doc.drawContents(painter, QRectF(page_rect_pt.left(), page_rect_pt.top(), page_w, page_h))
+            painter.restore()
+
+            # Footer: "Page X of Y"
+            footer_rect = QRectF(page_rect_pt.left(), page_rect_pt.bottom() - footer_h, page_w, footer_h)
+            painter.drawText(footer_rect, Qt.AlignCenter, f"Page {i+1} of {page_count}")
+
+        painter.end()
+        return True
+
+    def generate_pdf_report(self, mode, started_at, finished_at):
+        # Build meta
+        started_str  = started_at.toString("yyyy-MM-dd HH:mm:ss")
+        finished_str = finished_at.toString("yyyy-MM-dd HH:mm:ss")
+        elapsed_secs = max(0, finished_at.toSecsSinceEpoch() - started_at.toSecsSinceEpoch())
+        mm, ss = divmod(elapsed_secs, 60)
+        hh, mm = divmod(mm, 60)
+        elapsed_str = f"{hh:02d}:{mm:02d}:{ss:02d}"
+
+        rows = self.collect_all_rows()  # REQUIREMENT: include every machine
+
+        html = self.build_report_html(
+            {
+                "mode": mode,
+                "started_at_str": started_str,
+                "finished_at_str": finished_str,
+                "elapsed_str": elapsed_str,
+            },
+            rows
+        )
+
+        # Ensure reports/ exists
+        os.makedirs("reports", exist_ok=True)
+        ts = QDateTime.currentDateTime().toString("yyyy-MM-dd_HH-mm-ss")
+        out_path = os.path.join("reports", f"UpdateReport_{ts}.pdf")
+
+        ok = self.save_pdf(html, out_path)
+        if ok:
+            QMessageBox.information(self, "Report saved", f"PDF report saved to:\n{out_path}")
+        else:
+            QMessageBox.warning(self, "Report error", "Failed to save the PDF report.")
+
 def main():
     app = QApplication(sys.argv)
     window = MyApp()
