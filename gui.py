@@ -12,6 +12,7 @@ from PyQt5.QtCore import QTimer, QDateTime, Qt
 from PyQt5.QtGui import QTextDocument, QPageSize, QPageLayout
 from PyQt5.QtPrintSupport import QPrinter
 from PyQt5.QtCore import QMarginsF, QRectF
+import subprocess
 
 DATA_FILE = "table_data.json" 
 
@@ -955,8 +956,41 @@ class MyApp(QMainWindow):
         ok = self.save_pdf(html, out_path)
         if ok:
             QMessageBox.information(self, "Report saved", f"PDF report saved to:\n{out_path}")
+            send_report_email(out_path)  # <--- Send email after saving PDF
         else:
             QMessageBox.warning(self, "Report error", "Failed to save the PDF report.")
+
+def send_report_email(pdf_path):
+    # Load email settings from schedule.json
+    try:
+        with open("schedule.json", "r") as f:
+            config = json.load(f)
+        smtp_server = config.get("Email server", "")
+        from_addr = config.get("From email", "")
+        to_addr = config.get("To email", "")
+    except Exception as e:
+        print(f"Failed to load email config: {e}")
+        return
+
+    subject = "Windows Security Update Report"
+    body = "Please find the attached update report."
+
+    if not (smtp_server and from_addr and to_addr):
+        print("Email settings are incomplete in schedule.json.")
+        return
+
+    ps_command = [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-Command",
+        f'Send-MailMessage -From "{from_addr}" -To "{to_addr}" -Subject "{subject}" -Body "{body}" -SmtpServer "{smtp_server}" -Attachments "{os.path.abspath(pdf_path)}"'
+    ]
+    result = subprocess.run(ps_command, capture_output=True, text=True)
+    if result.returncode == 0:
+        print("Email sent successfully.")
+    else:
+        print(f"Email send failed: {result.stderr}")
 
 def main():
     app = QApplication(sys.argv)
